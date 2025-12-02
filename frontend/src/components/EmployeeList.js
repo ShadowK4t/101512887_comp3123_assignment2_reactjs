@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button } from 'react-bootstrap';
+import { Container, Table, Button, Form, Row, Col, Card } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { getAllEmployees, deleteEmployee } from '../services/api';
+import { getAllEmployees, deleteEmployee, searchEmployees } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const EmployeeList = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchDepartment, setSearchDepartment] = useState('');
+  const [searchPosition, setSearchPosition] = useState('');
   const navigate = useNavigate();
   const { logoutUser } = useAuth();
 
@@ -41,6 +43,35 @@ const EmployeeList = () => {
     navigate('/login');
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchDepartment && !searchPosition) {
+      alert('Please enter a department or position to search');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const params = {};
+      if (searchDepartment) params.department = searchDepartment;
+      if (searchPosition) params.position = searchPosition;
+
+      const response = await searchEmployees(params);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Error searching employees:', error);
+      alert('Error searching employees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchDepartment('');
+    setSearchPosition('');
+    fetchEmployees();
+  };
+
   if (loading) return <div className="text-center mt-5">Loading...</div>;
 
   return (
@@ -56,6 +87,49 @@ const EmployeeList = () => {
           </Button>
         </div>
       </div>
+
+      <Card className="mb-4 shadow-sm">
+        <Card.Body>
+          <h5 className="mb-3">Search Employees</h5>
+          <Form onSubmit={handleSearch}>
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Department</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g., IT, Design, Analytics"
+                    value={searchDepartment}
+                    onChange={(e) => setSearchDepartment(e.target.value)}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Position</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g., Engineer, Designer"
+                    value={searchPosition}
+                    onChange={(e) => setSearchPosition(e.target.value)}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4} className="d-flex align-items-end">
+                <Form.Group className="mb-3 w-100">
+                  <Button variant="success" type="submit" className="me-2">
+                    Search
+                  </Button>
+                  <Button variant="secondary" onClick={handleClearSearch}>
+                    Clear
+                  </Button>
+                </Form.Group>
+              </Col>
+            </Row>
+          </Form>
+        </Card.Body>
+      </Card>
+
       <Table striped bordered hover responsive>
         <thead>
           <tr>
@@ -78,7 +152,7 @@ const EmployeeList = () => {
               <td>
                 <Button
                   size="sm"
-                  variant="info"
+                  variant="primary"
                   className="me-2"
                   onClick={() => navigate(`/employees/view/${employee._id}`)}
                 >
@@ -86,7 +160,7 @@ const EmployeeList = () => {
                 </Button>
                 <Button
                   size="sm"
-                  variant="warning"
+                  variant="primary"
                   className="me-2"
                   onClick={() => navigate(`/employees/edit/${employee._id}`)}
                 >
